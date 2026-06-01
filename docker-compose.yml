@@ -77,8 +77,8 @@ services:
       #   95% vram_for_weights, UNIFIED_MEMORY detection, offload devices → cuda
       # utils.py: copy=False on tensor.to(device) — avoids double-allocation on unified memory
       #   where CPU and GPU share the same physical RAM (ComfyUI issue #10896)
-      - ./patches/model_management.py:/opt/ComfyUI/comfy/model_management.py:ro
-      - ./patches/utils.py:/opt/ComfyUI/comfy/utils.py:ro
+      # - ./patches/model_management.py:/opt/ComfyUI/comfy/model_management.py:ro
+      # - ./patches/utils.py:/opt/ComfyUI/comfy/utils.py:ro
 
     networks:
       - sparky_net
