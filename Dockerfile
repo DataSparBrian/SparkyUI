@@ -14,10 +14,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential ninja-build cmake pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a dedicated directory for system-wide python customization overrides
-RUN mkdir -p /opt/sparkle-patches
-COPY patches/sitecustomize.py /opt/sparkle-patches/sitecustomize.py
-
 # Inject headless UI libraries for OpenCV and hardware-accelerated ARM64 FFmpeg
 RUN apt-get update && apt-get install -y \
     libxcb1 \
