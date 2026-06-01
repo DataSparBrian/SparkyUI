@@ -49,6 +49,9 @@ services:
       # 4GB cache covers all typical ComfyUI kernel variants.
       CUDA_CACHE_MAXSIZE: "4294967296"
 
+      # Hardware Accelerated Video Encoding for Blackwell  
+      IMAGEIO_FFMPEG_EXE: "/usr/local/bin/ffmpeg"
+
     volumes:
       # Models from existing ComfyUI install (read-only)
       - ${COMFYUI_HOST_PATH}/models:/opt/ComfyUI/models:ro
