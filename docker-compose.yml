@@ -51,6 +51,10 @@ services:
 
       # Hardware Accelerated Video Encoding for Blackwell  
       IMAGEIO_FFMPEG_EXE: "/usr/local/bin/ffmpeg"
+      # Force Python to evaluate our customization path at engine boot
+      PYTHONPATH: "/opt/sparkle-patches"
+      # Set the defensive memory reservation buffer (in GB) for other containers
+      SPARKLE_MEM_BUFFER_GB: "4"
 
     volumes:
       # Models from existing ComfyUI install (read-only)
