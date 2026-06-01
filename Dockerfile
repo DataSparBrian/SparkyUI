@@ -14,6 +14,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential ninja-build cmake pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
+# Inject headless UI libraries for OpenCV and hardware-accelerated ARM64 FFmpeg
+RUN apt-get update && apt-get install -y \
+    libxcb1 \
+    libxrender1 \
+    libxext6 \
+    libgl1 \
+    libglib2.0-0 \
+    wget \
+    xz-utils \
+    && wget https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linuxarm64-gpl.tar.xz -O /tmp/ffmpeg.tar.xz \
+    && tar -xf /tmp/ffmpeg.tar.xz -C /tmp \
+    && mv /tmp/ffmpeg-master-latest-linuxarm64-gpl/bin/ffmpeg /usr/local/bin/ffmpeg \
+    && mv /tmp/ffmpeg-master-latest-linuxarm64-gpl/bin/ffprobe /usr/local/bin/ffprobe \
+    && rm -rf /tmp/ffmpeg* /var/lib/apt/lists/*
+
 # Create venv (keeps python deps isolated inside container)
 ENV VENV=/opt/venv
 RUN python3 -m venv $VENV
