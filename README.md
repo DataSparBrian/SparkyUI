@@ -19,6 +19,12 @@ When deploying this stack via Portainer or standard Compose, ensure you map the 
 * `COMFYUI_HOST_PATH=/path/to/your/ComfyUI/models`
 * `SPARKYUI_DATA_PATH=/path/to/your/custom_nodes_and_outputs`
 
+**Optional Environment Variables:**
+* `COMFYUI_LISTEN=0.0.0.0` — IP address ComfyUI binds to. Set to your Tailscale IP (e.g. `100.x.x.x`) to restrict access to the tailnet only. Defaults to `0.0.0.0` (all interfaces).
+* `COMFYUI_PORT=8188` — Port for the ComfyUI web UI.
+* `COMFYUIMINI_PORT=3000` — Port for the ComfyUIMini mobile UI.
+* `COMFYUI_FLAGS` — Full override for ComfyUI launch flags. When set, `COMFYUI_LISTEN` is ignored; include `--listen` explicitly.
+
 *Note on Portainer:* Do **not** use the "Enable relative path volumes" toggle. Pass the absolute host directory paths directly through the Portainer environment variables panel to ensure your `.safetensors` and output videos remain accessible on the primary host filesystem.
 
 ---
