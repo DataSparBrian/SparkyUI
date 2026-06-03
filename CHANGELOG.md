@@ -4,13 +4,16 @@ All notable changes to SparkyUI (Dataspar Fork) are documented here.
 
 ---
 
-## [Unreleased] — 2026-06-03
+## [prod-sparkle] — 2026-06-03
 
 ### Added
 - `COMFYUI_LISTEN` environment variable to restrict which host network interface exposes the ComfyUI port.
   Set to a Tailscale IP (e.g. `100.x.x.x`) to limit external access to the tailnet only; defaults to `0.0.0.0` (all interfaces).
   Implemented as a Docker host-side port binding (`COMFYUI_LISTEN:PORT:8188`) rather than the ComfyUI `--listen` flag —
   the container always binds internally on `0.0.0.0` so healthchecks and internal routing remain unaffected.
+
+### Changed
+- `memory/` directory added to `.gitignore` — Claude Code memory files are host-specific and not tracked in the repo.
 
 ---
 
