@@ -3,7 +3,8 @@ set -euo pipefail
 
 COMFY_DIR="/opt/ComfyUI"
 PORT="${COMFYUI_PORT:-8188}"
-FLAGS="${COMFYUI_FLAGS:---listen 0.0.0.0 --port ${PORT}}"
+LISTEN="${COMFYUI_LISTEN:-0.0.0.0}"
+FLAGS="${COMFYUI_FLAGS:---listen ${LISTEN} --port ${PORT} --disable-pinned-memory --dont-upcast-attention}"
 
 echo "[entrypoint] Python: $(python --version)"
 echo "[entrypoint] Torch:  $(python -c 'import torch; print(torch.__version__)')"
