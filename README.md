@@ -3,13 +3,13 @@
 ComfyUI + SageAttention tailored for the NVIDIA DGX Spark (Blackwell GB10, ARM64, sm_121).
 
 ## 🚀 Dataspar Architecture Update (June 2026)
-This branch (`prod-sparkle`) prioritizes clean infrastructure architecture over brittle workarounds. As of May 2026, the upstream ComfyUI repository natively integrated robust Grace-Blackwell unified memory handling. 
+This branch (`prod-sparkle`) takes a clean infrastructure approach, removing workarounds that are no longer necessary. As of May 2026, the upstream ComfyUI repository natively integrated Grace-Blackwell unified memory handling.
 
-Therefore, this fork **strips out all legacy file monkey-patches** (e.g., static `model_management.py` and `utils.py` volume remaps) that were causing `cudaMallocAsync` allocator crashes and drift-related pipeline failures. By relying on native driver allocation, this stack allows ComfyUI to pull the absolute newest upstream code without interference.
+Therefore, this fork **removes all legacy file-level overrides** (e.g., static `model_management.py` and `utils.py` volume remaps) that were contributing to `cudaMallocAsync` allocator crashes and pipeline instability. By relying on native driver allocation, this stack stays fully compatible with the latest upstream ComfyUI releases.
 
 ### 🏗️ Key Infrastructure Enhancements
 1. **Native Unified Memory:** Removed legacy `Triplany` and SparkyUI file-level VRAM patches. ComfyUI now dynamically scales across the NVLink-C2C fabric using its own updated internal safeguards.
-2. **Headless Video Processing Support:** Baked `libxcb`, minimal X11 display libraries, and hardware-accelerated ARM64 FFmpeg natively into the `Dockerfile`. This permanently resolves the headless container traps and `ImportError` crashes when utilizing nodes like `ComfyUI-VideoHelperSuite`.
+2. **Headless Video Processing Support:** Baked `libxcb`, minimal X11 display libraries, and hardware-accelerated ARM64 FFmpeg natively into the `Dockerfile`. This permanently resolves `ImportError` crashes in headless containers when using nodes like `ComfyUI-VideoHelperSuite`.
 3. **Portainer GitOps Ready:** Streamlined `docker-compose.yml` to utilize absolute host paths and isolated health checks, making it fully compatible with automated Webhook/Polling deployments via Portainer Business Edition.
 
 ### ⚙️ Deployment Instructions (GitOps / Portainer)
@@ -29,42 +29,248 @@ When deploying this stack via Portainer or standard Compose, ensure you map the 
 
 ---
 
-*(Original Upstream Documentation Below)*
+*(Original Upstream Documentation Below — synced from [ecarmen16/SparkyUI](https://github.com/ecarmen16/SparkyUI))*
+
+# SparkyUI
+
+**ComfyUI + SageAttention for NVIDIA DGX Spark (Blackwell GB10)**
+
+A Docker-based ComfyUI setup specifically engineered for the DGX Spark's unique ARM64 + Blackwell architecture.
 
 ## Why This Exists
-The NVIDIA DGX Spark uses the GB10 GPU with compute capability 12.1 (sm_121) - Blackwell architecture. This creates challenges:
+
+The NVIDIA DGX Spark uses the **GB10 GPU** with compute capability **12.1 (sm_121)** - Blackwell architecture. This creates challenges:
 
 | CUDA Version | Max Compute Capability | Can compile for GB10? |
-|--------------|------------------------|-----------------------|
-| CUDA 12.8    | sm_120                 | No                    |
-| CUDA 13.0+   | sm_121                 | Yes                   |
+|--------------|------------------------|----------------------|
+| CUDA 12.8 | sm_120 | **No** |
+| CUDA 13.0+ | sm_121 | **Yes** |
 
 Standard ComfyUI containers and PyTorch wheels don't support sm_121. SparkyUI solves this by:
-* Using CUDA 13.0.2 base image (supports sm_121)
-* Installing PyTorch cu130 ARM64 wheels (v2.9.1+)
-* Compiling SageAttention natively with `TORCH_CUDA_ARCH_LIST="12.1"`
-* Disabling Triton/torch.compile via `TORCHDYNAMO_DISABLE=1`
-* Optimizing for Grace-Blackwell unified memory architecture
+
+1. Using **CUDA 13.0.2** base image (supports sm_121)
+2. Installing **PyTorch cu130** ARM64 wheels
+3. Compiling **SageAttention** with `TORCH_CUDA_ARCH_LIST="12.1"`
+4. Disabling **Triton/torch.compile** (doesn't support sm_121 yet)
+5. **Optimized for Grace-Blackwell unified memory architecture**
+
+## What's Included
+
+- **ComfyUI** (latest master branch)
+- **ComfyUI-Manager** - auto-installed on first run for easy custom node management
+- **ComfyUIMini** - mobile-friendly web UI for phones/tablets (separate container)
+- **SageAttention** - compiled natively for sm_121 (Blackwell tensor cores)
+- **PyTorch 2.9.1+cu130** - ARM64 wheels with CUDA 13.0 support
 
 ## Unified Memory Architecture
-The DGX Spark's Grace-Blackwell architecture uses unified memory - a coherent memory fabric shared between CPU and GPU. 
 
-**Key insight:** Don't fight the fabric. Forcing everything GPU-side (`--gpu-only`, `--cache-none`) hurts performance.
+The DGX Spark's Grace-Blackwell architecture uses **unified memory** - a coherent memory fabric shared between CPU and GPU. This is fundamentally different from discrete GPUs and requires different optimization strategies.
 
-Optimized flags (default in SparkyUI):
-* `--disable-pinned-memory`: Reduces overhead on unified fabric
-* `--force-fp16`: Enables SageAttention optimization
-* `--fp16-unet --fp16-vae --fp16-text-enc`: FP16 precision throughout
-* `--dont-upcast-attention`: Keeps attention in FP16 for speed
+**Key insight: Don't fight the fabric.** Forcing everything GPU-side (`--gpu-only`, `--cache-none`) actually hurts performance.
+
+**Optimized flags (default in SparkyUI):**
+```bash
+--disable-pinned-memory   # Reduces overhead on unified fabric
+--force-fp16              # Enables SageAttention optimization
+--fp16-unet --fp16-vae --fp16-text-enc  # FP16 precision throughout
+--dont-upcast-attention   # Keeps attention in FP16 for speed
+```
+
+**What NOT to use:**
+- `--gpu-only` - fights the unified memory fabric, hurts performance
+- `--cache-none` - disables natural caching, slows model loading
+- `--disable-mmap` - prevents memory-mapped model loading
+
+**CUDA environment variables** are also tuned for unified memory:
+- `CUDA_MANAGED_FORCE_DEVICE_ALLOC=1` - prefer GPU allocation
+- `PYTORCH_NO_CUDA_MEMORY_CACHING=1` - let fabric manage memory
+- `OMP_NUM_THREADS=20` - utilize all 20 ARM cores
+
+## Quick Start
+
+```bash
+# Clone
+git clone https://github.com/ecarmen16/SparkyUI.git
+cd SparkyUI
+
+# Configure paths
+cp .env.example .env
+# Edit .env with your paths
+
+# Build (compiles SageAttention for sm_121 - takes ~10 min)
+docker compose build
+
+# Start
+docker compose up -d
+
+# View logs
+docker compose logs -f
+```
+
+**Access:**
+- **ComfyUI (Desktop):** http://localhost:8188
+- **ComfyUIMini (Mobile):** http://localhost:3000
+
+## Requirements
+
+- **NVIDIA DGX Spark** (or other GB10-based system)
+- **Docker** with NVIDIA Container Toolkit
+- **NVIDIA Driver** 560+ (tested with 580.95)
+- **~15GB** disk for Docker image
+- **Models** from existing ComfyUI install (mounted read-only)
+
+## Configuration
+
+Copy `.env.example` to `.env` and edit:
+
+```bash
+# Path to your existing ComfyUI models (mounted read-only)
+COMFYUI_HOST_PATH=/path/to/your/ComfyUI
+
+# Path for SparkyUI data (custom_nodes, outputs, inputs)
+SPARKYUI_DATA_PATH=/path/to/SparkyUI
+
+# Optional: pin to specific versions
+COMFYUI_REF=master
+SAGEATTN_REF=main
+```
+
+## Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                        DGX Spark Host                             │
+│  Ubuntu 24.04 (DGX OS 7) / Driver 580.x                          │
+│                                                                   │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │                    Docker Network (sparky_net)              │  │
+│  │                                                             │  │
+│  │  ┌─────────────────────────┐  ┌──────────────────────────┐ │  │
+│  │  │  comfyui (sparkyui:cu130)│  │  comfyuimini (node:20)   │ │  │
+│  │  │                         │  │                          │ │  │
+│  │  │  CUDA 13.0.2 + PyTorch  │◄─┤  Mobile-friendly UI      │ │  │
+│  │  │  SageAttention (sm_121) │  │  REST + WebSocket proxy  │ │  │
+│  │  │  ComfyUI + Manager      │  │                          │ │  │
+│  │  │                         │  │  Shares /output volume   │ │  │
+│  │  └───────────┬─────────────┘  └────────────┬─────────────┘ │  │
+│  │              │                             │                │  │
+│  └──────────────┼─────────────────────────────┼────────────────┘  │
+│                 │                             │                    │
+│          Port 8188 (Desktop)           Port 3000 (Mobile)         │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+## Version Compatibility
+
+Tested combinations:
+
+| Component | Version | Notes |
+|-----------|---------|-------|
+| CUDA Base | 13.0.2 | Required for sm_121 |
+| PyTorch | 2.9.1+cu130 | ARM64 wheel from PyTorch index |
+| torchvision | 0.24.1+cu130 | ARM64 wheel |
+| SageAttention | 2.2.0 | Compiled with sm_121 |
+| ComfyUI | 0.7.0 | master branch |
+| Driver | 580.95 | DGX OS 7 default |
+
+## Known Limitations
+
+1. **PyTorch Warning**: You'll see a warning about compute capability 12.1 being "outside supported range (8.0-12.0)". This is harmless - PyTorch works, and SageAttention's custom kernels are compiled natively.
+
+2. **torch.compile Disabled**: Triton doesn't support sm_121 yet. `torch.compile()` is disabled via environment variables. Some nodes may run slower than on supported architectures.
+
+3. **No GitHub Actions CI**: Can't build for ARM64 + sm_121 in GitHub's hosted runners. Must build locally on DGX Spark.
+
+## Troubleshooting
+
+### "no kernel image is available for execution on the device"
+Your SageAttention wasn't compiled for sm_121. Rebuild:
+```bash
+docker compose build --no-cache
+```
+
+### PyTorch can't find CUDA
+Ensure NVIDIA Container Toolkit is installed:
+```bash
+nvidia-ctk --version
+docker run --rm --gpus all nvidia/cuda:13.0.2-base-ubuntu24.04 nvidia-smi
+```
+
+### ComfyUI-Manager missing
+The entrypoint auto-clones it. Check logs:
+```bash
+docker compose logs | grep -i manager
+```
+
+## Host-Level GPU Optimizations (Optional)
+
+For maximum performance, apply these optimizations on the **host** (not in Docker):
+
+```bash
+# Lock GPU clocks to maximum (3003 MHz) - prevents throttling
+sudo nvidia-smi -lgc 3003,3003
+
+# Enable core clock boost (GPU core > memory clock for compute)
+sudo nvidia-smi boost-slider --vboost 1
+
+# Enable persistence mode (reduces driver load latency)
+sudo nvidia-smi -pm 1
+
+# Verify settings
+nvidia-smi --query-gpu=clocks.sm,clocks.max.sm,persistence_mode --format=csv
+```
+
+**Note:** GPU clock settings don't persist across reboots due to GB10 firmware behavior. Re-apply after each boot.
 
 ## ComfyUIMini (Mobile UI)
-SparkyUI includes ComfyUIMini - a lightweight, mobile-friendly web UI running in a separate container.
-* Responsive design optimized for phones and tablets
-* Access: `http://<your-dgx-ip>:3000`
-* Note: Utilizes a hardcoded IPv4 healthcheck (`127.0.0.1`) to prevent IPv6 loopback collisions on Alpine Node deployments.
+
+SparkyUI includes [ComfyUIMini](https://github.com/ImDarkTom/ComfyUIMini) - a lightweight, mobile-friendly web UI that runs in a separate container.
+
+**Features:**
+- Responsive design optimized for phones and tablets
+- Simplified workflow execution interface
+- Built-in image gallery (reads from shared output directory)
+- Import workflows from ComfyUI in "API Format"
+- Multiple themes (dark, light, aurora, nord, etc.)
+
+**How it works:**
+- Runs as a Node.js Express server in its own container (~150MB)
+- Connects to ComfyUI via internal Docker network (`http://comfyui:8188`)
+- Proxies REST API calls and WebSocket connections
+- Shares the output directory for gallery viewing
+
+**Access:** `http://<your-dgx-ip>:3000`
+
+**Build only ComfyUIMini** (if ComfyUI already built):
+```bash
+docker compose build comfyuimini
+docker compose up -d comfyuimini
+```
+
+## SageAttention Notes
+
+SageAttention PR #297 added sm_121 support but was merged then reverted due to stability issues. Our approach:
+
+- Build SageAttention from main branch with `TORCH_CUDA_ARCH_LIST="12.1"`
+- Disable Triton via `TORCHDYNAMO_DISABLE=1` (Triton doesn't support sm_121a)
+- This gives working SageAttention without the unstable PR #297 changes
+
+For full Triton support (more complex), see [HurbaLurba's DGX-SPARK-COMFYUI-DOCKER](https://github.com/HurbaLurba/DGX-SPARK-COMFYUI-DOCKER) which builds custom Triton from source.
+
+## Future
+
+When these land, SparkyUI can be simplified:
+- [ ] PyTorch native sm_121 support → remove explicit `TORCH_CUDA_ARCH_LIST`
+- [ ] Triton sm_121 support → remove `TORCHDYNAMO_DISABLE`
+- [ ] SageAttention prebuilt ARM64 wheels → remove source build
 
 ## Credits
-* Unified memory architecture insights from the DGX Spark Community
-* ComfyUIMini by ImDarkTom
-* SageAttention by thu-ml
-* ComfyUI by comfyanonymous
+
+- Unified memory architecture insights from [HurbaLurba's DGX-SPARK-COMFYUI-DOCKER](https://github.com/HurbaLurba/DGX-SPARK-COMFYUI-DOCKER)
+- [ComfyUIMini](https://github.com/ImDarkTom/ComfyUIMini) by ImDarkTom
+- [SageAttention](https://github.com/thu-ml/SageAttention) by thu-ml
+- [ComfyUI](https://github.com/comfyanonymous/ComfyUI) by comfyanonymous
+
+## License
+
+MIT
