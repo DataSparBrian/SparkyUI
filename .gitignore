@@ -1,6 +1,9 @@
 # Project-specific internal docs
 CLAUDE.md
 
+# Claude Code memory — host-specific details, intentionally private
+memory/
+
 # Environment (contains local paths)
 .env
 *.env.local

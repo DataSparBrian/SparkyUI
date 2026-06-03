@@ -21,17 +21,17 @@ services:
               count: all
               capabilities: [gpu]
 
-    # LAN exposure
+    # Host-side port binding. Set COMFYUI_LISTEN to a specific IP (e.g. Tailscale IP) to
+    # restrict which host interface is exposed. ComfyUI always listens on 0.0.0.0 inside
+    # the container; Docker handles the external interface restriction here.
     ports:
-      - "${COMFYUI_PORT:-8188}:8188"
+      - "${COMFYUI_LISTEN:-0.0.0.0}:${COMFYUI_PORT:-8188}:8188"
 
     environment:
       COMFYUI_PORT: "${COMFYUI_PORT:-8188}"
-      # Set to a specific IP (e.g. Tailscale IP) to restrict the listener; 0.0.0.0 exposes all interfaces
-      COMFYUI_LISTEN: "${COMFYUI_LISTEN:-0.0.0.0}"
       # Optimized for Grace-Blackwell unified memory architecture
       # Key insight: DON'T use --gpu-only - let the unified memory fabric work naturally
-      COMFYUI_FLAGS: "${COMFYUI_FLAGS:---listen ${COMFYUI_LISTEN:-0.0.0.0} --port 8188 --disable-pinned-memory --dont-upcast-attention}"
+      COMFYUI_FLAGS: "${COMFYUI_FLAGS:---listen 0.0.0.0 --port 8188 --disable-pinned-memory --dont-upcast-attention}"
       NVIDIA_VISIBLE_DEVICES: "all"
       NVIDIA_DRIVER_CAPABILITIES: "compute,utility"
 
