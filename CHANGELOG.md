@@ -4,12 +4,13 @@ All notable changes to SparkyUI (Dataspar Fork) are documented here.
 
 ---
 
-## [Unreleased] — 2026-06-02
+## [Unreleased] — 2026-06-03
 
 ### Added
-- `COMFYUI_LISTEN` environment variable to control the ComfyUI listener IP address.
-  Set to a Tailscale IP (e.g. `100.x.x.x`) to restrict access to the tailnet; defaults to `0.0.0.0` (all interfaces).
-  Effective via `stack.env`, Portainer environment panel, or Docker Compose override.
+- `COMFYUI_LISTEN` environment variable to restrict which host network interface exposes the ComfyUI port.
+  Set to a Tailscale IP (e.g. `100.x.x.x`) to limit external access to the tailnet only; defaults to `0.0.0.0` (all interfaces).
+  Implemented as a Docker host-side port binding (`COMFYUI_LISTEN:PORT:8188`) rather than the ComfyUI `--listen` flag —
+  the container always binds internally on `0.0.0.0` so healthchecks and internal routing remain unaffected.
 
 ---
 
