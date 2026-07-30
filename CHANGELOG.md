@@ -13,14 +13,23 @@ All notable changes to SparkyUI (Dataspar Fork) are documented here.
 - `Dockerfile`: llama-cpp-python built from source with CUDA (`GGML_CUDA=on`, `CMAKE_CUDA_ARCHITECTURES=121`) —
   abetlen's prebuilt wheel index is x86_64/win_amd64-only for every CUDA tag, so comfyui_llm_party's local-GGUF
   inference install was failing on every container start.
+- `Dockerfile`: `uv` added to the venv's packaging tools — used by `entrypoint.sh` to resolve all custom node
+  `requirements.txt` files together in a single pass instead of installing them one at a time with pip.
 
 ### Fixed
-- `entrypoint.sh`: custom node `requirements.txt` files are now installed one package at a time instead of as a
-  single `pip install -r`. Large/loosely-pinned node requirement files (e.g. ComfyUI_LayerStyle) could exceed
-  pip's resolver depth limit ("resolution-too-deep") and abort installing the entire file, silently leaving every
-  package in it missing — this is what caused `ModuleNotFoundError: No module named 'blend_modes'` and LayerStyle
-  failing to import. Per-line installs also skip torch/torchvision/torchaudio lines so a node's unpinned `torch`
-  requirement can never overwrite the pinned cu130/sm_121 PyTorch build.
+- `entrypoint.sh`: custom node dependency installation now uses a single unified `uv pip install` across every
+  `custom_nodes/*/requirements.txt` file, constrained so torch/torchvision/torchaudio can never be swapped away
+  from the pinned cu130/sm_121 build, falling back to per-node `uv` installs (still constrained) if the unified
+  resolve fails outright. This replaces the previous per-line `pip install` approach, which avoided pip's
+  "resolution-too-deep" abort but let installs silently drift out of sync with each other — which is what caused
+  ComfyUI_LayerStyle's opencv-python 5.x (requires numpy>=2) to land next to an already-installed numpy 1.26.4,
+  an ABI break that kept the container from ever finishing startup. This mirrors the fix the ComfyUI ecosystem
+  itself adopted for the same systemic problem: comfy-cli's `--fast-deps` and ComfyUI-Manager's `use_uv` both
+  batch-resolve core + all custom node dependencies together via uv rather than installing them independently.
+- `Dockerfile`: onnxruntime source build now passes `--allow_running_as_root` — Docker `RUN` steps execute as
+  root by default, and onnxruntime's `build.sh` has an explicit safety guard against that which was aborting the
+  build immediately (`Running as root is not allowed`). Root inside an isolated Docker build stage is expected
+  and fine; this is the flag onnxruntime ships for exactly that case.
 - `docker-compose.yml`: added `pull_policy: build` to `comfyui` and `comfyuimini`. Both services are locally-built
   only and were never published to any registry; Portainer's GitOps redeploy runs `docker compose pull` before
   `up`, which was failing with "pull access denied ... repository does not exist" and aborting the deploy before

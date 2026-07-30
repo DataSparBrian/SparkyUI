@@ -34,8 +34,9 @@ ENV VENV=/opt/venv
 RUN python3 -m venv $VENV
 ENV PATH="$VENV/bin:$PATH"
 
-# Upgrade packaging tools
-RUN pip install -U pip setuptools wheel
+# Upgrade packaging tools. uv is used at runtime by entrypoint.sh to resolve
+# all custom node requirements.txt files together in one pass (see entrypoint.sh).
+RUN pip install -U pip setuptools wheel uv
 
 # ---- PyTorch (ARM64 + CUDA 13.0) ----
 # PyTorch cu130 wheels work with CUDA 13.0.x runtime.
