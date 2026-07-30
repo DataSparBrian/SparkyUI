@@ -10,6 +10,11 @@ services:
         SAGEATTN_REF: "${SAGEATTN_REF:-main}"
 
     image: sparkyui:cu130
+    # Locally-built image only — never published to a registry. Without this, Portainer's
+    # GitOps "Re-pull image" setting (and `docker compose pull` in general) tries to fetch
+    # sparkyui:cu130 from a registry and fails with "pull access denied ... repository does
+    # not exist", aborting the whole deploy before it even stages the stack.
+    pull_policy: build
     container_name: comfyui
 
     # GPU enablement
@@ -93,6 +98,8 @@ services:
         COMFYUIMINI_REF: "${COMFYUIMINI_REF:-main}"
 
     image: comfyuimini:latest
+    # Locally-built image only — same rationale as comfyui above.
+    pull_policy: build
     container_name: comfyuimini
 
     ports:

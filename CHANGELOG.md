@@ -21,6 +21,11 @@ All notable changes to SparkyUI (Dataspar Fork) are documented here.
   package in it missing — this is what caused `ModuleNotFoundError: No module named 'blend_modes'` and LayerStyle
   failing to import. Per-line installs also skip torch/torchvision/torchaudio lines so a node's unpinned `torch`
   requirement can never overwrite the pinned cu130/sm_121 PyTorch build.
+- `docker-compose.yml`: added `pull_policy: build` to `comfyui` and `comfyuimini`. Both services are locally-built
+  only and were never published to any registry; Portainer's GitOps redeploy runs `docker compose pull` before
+  `up`, which was failing with "pull access denied ... repository does not exist" and aborting the deploy before
+  it could even stage the stack directory (the same failure surfaced separately as a missing `stack.env` file when
+  starting the stack manually).
 
 ---
 
