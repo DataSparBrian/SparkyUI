@@ -67,6 +67,9 @@ RUN pip install --no-build-isolation "git+https://github.com/thu-ml/SageAttentio
 # onnxruntime-gpu publishes x86_64/win_amd64 wheels only; without a GPU-enabled build here,
 # comfyui_controlnet_aux's DWPose preprocessor silently falls back to slow CPU/OpenCV inference.
 # cuDNN 9 for CUDA 13 is required by the build and isn't present in the base devel image.
+# --allow_running_as_root: Docker RUN steps run as root by default; onnxruntime's build.sh
+# guards against that (a safety check for interactive/host use) — expected and fine in an
+# isolated build stage.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libcudnn9-cuda-13 libcudnn9-dev-cuda-13 \
     && rm -rf /var/lib/apt/lists/*
@@ -75,6 +78,7 @@ RUN git clone --recursive --branch v1.24.4 --depth 1 \
         https://github.com/microsoft/onnxruntime /opt/onnxruntime && \
     cd /opt/onnxruntime && \
     ./build.sh --config Release --build_wheel --update --build --skip_tests \
+        --allow_running_as_root \
         --parallel --nvcc_threads 4 \
         --use_cuda --cuda_version 13 --cuda_home /usr/local/cuda --cudnn_home /usr \
         --cmake_generator Ninja \
