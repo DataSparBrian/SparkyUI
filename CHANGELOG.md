@@ -4,6 +4,26 @@ All notable changes to SparkyUI (Dataspar Fork) are documented here.
 
 ---
 
+## [prod-sparkle] — 2026-07-30
+
+### Added
+- `Dockerfile`: onnxruntime built from source (v1.24.4, `CMAKE_CUDA_ARCHITECTURES=121`) with cuDNN 9 for CUDA 13 —
+  onnxruntime-gpu has no aarch64 PyPI wheels, so comfyui_controlnet_aux's DWPose preprocessor was silently
+  falling back to CPU/OpenCV inference.
+- `Dockerfile`: llama-cpp-python built from source with CUDA (`GGML_CUDA=on`, `CMAKE_CUDA_ARCHITECTURES=121`) —
+  abetlen's prebuilt wheel index is x86_64/win_amd64-only for every CUDA tag, so comfyui_llm_party's local-GGUF
+  inference install was failing on every container start.
+
+### Fixed
+- `entrypoint.sh`: custom node `requirements.txt` files are now installed one package at a time instead of as a
+  single `pip install -r`. Large/loosely-pinned node requirement files (e.g. ComfyUI_LayerStyle) could exceed
+  pip's resolver depth limit ("resolution-too-deep") and abort installing the entire file, silently leaving every
+  package in it missing — this is what caused `ModuleNotFoundError: No module named 'blend_modes'` and LayerStyle
+  failing to import. Per-line installs also skip torch/torchvision/torchaudio lines so a node's unpinned `torch`
+  requirement can never overwrite the pinned cu130/sm_121 PyTorch build.
+
+---
+
 ## [prod-sparkle] — 2026-06-03
 
 ### Added

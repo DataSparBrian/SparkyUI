@@ -19,12 +19,24 @@ if [[ ! -f "${COMFY_DIR}/custom_nodes/ComfyUI-Manager/__init__.py" ]]; then
         "${COMFY_DIR}/custom_nodes/ComfyUI-Manager" || true
 fi
 
-# Install any requirements from custom nodes
+# Install custom node requirements one package at a time. A single
+# `pip install -r requirements.txt` forces pip to resolve every package in
+# the file at once — large/loosely-pinned node requirement files (e.g.
+# ComfyUI_LayerStyle) can exceed pip's resolver depth limit
+# ("resolution-too-deep") and abort the WHOLE file, silently skipping every
+# package in it. torch/torchvision/torchaudio lines are skipped outright so
+# a node's unpinned `torch` requirement can never clobber the pinned
+# cu130/sm_121 PyTorch build.
 for req in "${COMFY_DIR}"/custom_nodes/*/requirements.txt; do
     if [[ -f "$req" ]]; then
         echo "[entrypoint] Installing deps from: $req"
-        pip install -q -r "$req" || true
+        grep -vE '^[[:space:]]*(#|torch([[:space:]<>=!~]|$)|torchvision([[:space:]<>=!~]|$)|torchaudio([[:space:]<>=!~]|$))' "$req" | \
+        while IFS= read -r pkgline; do
+            [[ -z "$(echo "$pkgline" | tr -d '[:space:]')" ]] && continue
+            pip install -q "$pkgline" || echo "[entrypoint] WARN: failed to install '$pkgline' from $req" >&2
+        done
     fi
 done
+pip check || true
 
 exec python "${COMFY_DIR}/main.py" ${FLAGS}
