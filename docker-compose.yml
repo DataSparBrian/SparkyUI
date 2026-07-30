@@ -6,8 +6,10 @@ services:
       args:
         # Pin ComfyUI to a known-good commit/tag if desired
         COMFYUI_REF: "${COMFYUI_REF:-master}"
-        # SageAttention ref (e.g., "main", "v2.2.0", or specific commit)
-        SAGEATTN_REF: "${SAGEATTN_REF:-main}"
+        # Pre-built base image (CUDA/PyTorch/SageAttention/onnxruntime-gpu/llama-cpp-python).
+        # Built and pushed separately via Dockerfile.base -- bump this tag when that image is
+        # deliberately rebuilt with a real change (see Dockerfile.base for the build/push commands).
+        SPARKYUI_BASE_IMAGE: "${SPARKYUI_BASE_IMAGE:-ghcr.io/datasparbrian/sparkyui-base:cu130-1}"
 
     image: sparkyui:cu130
     # Locally-built image only — never published to a registry. Without this, Portainer's
